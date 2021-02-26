@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="ISO-8859-2" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<scenario name="UAS SUBSCRIBE with remote info">
+  <!-- By adding rrs="true" (Record Route Sets), the route sets         -->
+  <!-- are saved and used for following messages sent. Useful to test   -->
+  <!-- against stateful SIP proxies/B2BUAs.                             -->
+  <recv request="SUBSCRIBE" crlf="true">
+    <action>
+	<ereg regexp=".*" search_in="hdr" header="From" assign_to="3"/>
+	<ereg regexp="sip:(.*)>" search_in="hdr" header="Contact" assign_to="4,5"/>
+        <assign assign_to="4" variable="5" />
+    </action>
+  </recv>
+
+  <!-- The '[last_*]' keyword is replaced automatically by the          -->
+  <!-- specified header if it was present in the last message received  -->
+  <!-- (except if it was a retransmission). If the header was not       -->
+  <!-- present or if no message has been received, the '[last_*]'       -->
+  <!-- keyword is discarded, and all bytes until the end of the line    -->
+  <!-- are also discarded.                                              -->
+  <!--                                                                  -->
+  <!-- If the specified header was present several times in the         -->
+  <!-- message, all occurences are concatenated (CRLF seperated)        -->
+  <!-- to be used in place of the '[last_*]' keyword.                   -->
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:sipp@[local_ip]:[local_port]>
+      Content-Length: 0
+      Expires: 90
+    ]]>
+  </send>
+
+  <send>
+    <![CDATA[
+      NOTIFY sip:[$5] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];rport;branch=z9hG4bKPj01
+      From: sipp <sip:sipp@[local_ip]>;tag=[call_number]
+      To[$3]
+      Call-ID: [call_id]
+      Cseq: 1 NOTIFY
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Event: dialog
+      Subscription-State: active
+      Content-Type: application/dialog-info+xml
+      Content-Length: [len]
+      
+        <?xml version="1.0"?>
+        <dialog-info xmlns="urn:ietf:params:xml:ns:dialog-info" version="36" state="full" entity="sip:11@192.168.137.6">
+        <dialog id="11" call-id="pickup-456c27fb382927f2" local-tag="3eba3390544d05d2" remote-tag="as6206d1c8" direction="recipient">
+        <remote>
+        <identity display="11">sip:11@192.168.137.6</identity>
+        <target uri="sip:11@192.168.137.6"/>
+        </remote>
+        <local>
+        <identity display="11">sip:11@192.168.137.6</identity>
+        <target uri="sip:11@192.168.137.6"/>
+        </local>
+        <state>early</state>
+        </dialog>
+        </dialog-info>      
+    ]]>
+  </send>  
+  
+  <recv response="200">
+  </recv>
+
+  <pause milliseconds="5000"/>  
+  
+  <send>
+    <![CDATA[
+      NOTIFY sip:[$5] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];rport;branch=z9hG4bKPj01
+      From: sipp <sip:sipp@[local_ip]>;tag=[call_number]
+      To[$3]
+      Call-ID: [call_id]
+      Cseq: 2 NOTIFY
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Event: dialog
+      Subscription-State: active
+      Content-Type: application/dialog-info+xml
+      Content-Length: [len]
+      
+        <?xml version="1.0"?>
+        <dialog-info xmlns="urn:ietf:params:xml:ns:dialog-info" version="36" state="full" entity="sip:11@192.168.137.6">
+        <dialog id="11" call-id="pickup-456c27fb382927f2" local-tag="3eba3390544d05d2" remote-tag="as6206d1c8" direction="recipient">
+        <state>confirmed</state>
+        </dialog>
+        </dialog-info>      
+    ]]>
+  </send>  
+  
+  <recv response="200">
+  </recv>  
+  
+  <pause milliseconds="5000"/>    
+  
+  <send>
+    <![CDATA[
+      NOTIFY sip:[$5] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];rport;branch=z9hG4bKPj01
+      From: sipp <sip:sipp@[local_ip]>;tag=[call_number]
+      To[$3]
+      Call-ID: [call_id]
+      Cseq: 3 NOTIFY
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Event: dialog
+      Subscription-State: active
+      Content-Type: application/dialog-info+xml
+      Content-Length: [len]
+      
+        <?xml version="1.0"?>
+        <dialog-info xmlns="urn:ietf:params:xml:ns:dialog-info" version="36" state="full" entity="sip:11@192.168.137.6">
+        <dialog id="11" call-id="pickup-456c27fb382927f2" local-tag="3eba3390544d05d2" remote-tag="as6206d1c8" direction="recipient">
+        <remote>
+        <identity display="11">sip:11@192.168.137.6</identity>
+        <target uri="sip:11@192.168.137.6"/>
+        </remote>
+        <local>
+        <identity display="11">sip:11@192.168.137.6</identity>
+        <target uri="sip:11@192.168.137.6"/>
+        </local>
+        <state>terminated</state>
+        </dialog>
+        </dialog-info>      
+    ]]>
+  </send>  
+  
+  <recv response="200">
+  </recv>    
+
+
+</scenario>
+
