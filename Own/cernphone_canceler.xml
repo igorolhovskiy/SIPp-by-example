@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- This sipp scenario combines 2 types of CANCEL with different reasons
+Reason "Call Completed Elsewhere" will not get into a missed calls list
+CANCEL without a reason will get there
+Which CANCEL would be sent, controlled by field 4 in CSV line
+If this field == 'answered', call is considered answered and will not get into missed call list
+In all other cases call considered missed -->
+
+<scenario name="CERNphone canceler">
+ <send>
+  <![CDATA[
+
+    INVITE sip:[field0 line=0]@[remote_ip]:[remote_port] SIP/2.0
+    Via: SIP/2.0/[transport] [local_ip]:[local_port]
+    From: <sip:[field1 line=0]@[local_ip]:[local_port]>;tag=[call_number]_sipp_call_canceler_[call_number]
+    To: <sip:[field0 line=0]@[remote_ip]:[remote_port]>
+    Call-ID: [call_id]
+    Cseq: [cseq] INVITE
+    Allow: OPTIONS, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, REGISTER, MESSAGE, REFER
+    Supported: 100rel, timer, replaces, norefersub
+    Session-Expires: 1800
+    Min-SE: 90
+    Contact: sip:asterisk@[local_ip]:[local_port]
+    Max-Forwards: 70
+    User-Agent: CERNphone canceler
+    X-IOS-Contact-Hash: [field3 line=0]
+    Content-Type: application/sdp
+    Content-Length: [len]
+
+    v=0
+    o=- 558046395 558046395 IN IP[media_ip_type] [media_ip]
+    s=Asterisk
+    c=IN IP[media_ip_type] [media_ip]
+    t=0 0
+    m=audio 16170 RTP/AVP 107 8 0 101
+    a=rtpmap:107 opus/48000/2
+    a=fmtp:107 useinbandfec=1
+    a=rtpmap:8 PCMA/8000
+    a=rtpmap:0 PCMU/8000
+    a=rtpmap:101 telephone-event/8000
+    a=fmtp:101 0-16
+    a=ptime:20
+    a=maxptime:20
+    a=sendrecv
+    m=video 14074 RTP/AVP 100
+    a=rtpmap:100 VP8/90000
+    a=sendrecv
+
+  ]]>
+ </send>
+
+ <!-- Wait for provisional responces and if something wrong (404 or timeout) - end scenario -->
+ <recv response="100" optional="true" timeout="5000" ontimeout="12"/>
+ <recv response="404" optional="true" next="12"/>
+ <recv response="180" timeout="5000" ontimeout="12" />
+
+<!-- Check if field4 == 'answered' and assign bool result to $3 -->
+
+ <nop>
+  <action>
+    <assignstr assign_to="1" value="[field4 line=0]" />
+    <strcmp assign_to="2" variable="1" value="answered" />
+    <test assign_to="3" variable="2" compare="equal" value="0" />
+  </action>
+ </nop>
+
+<!-- If $3 == true, go to label 10  -->
+ <nop next="10" test="3" />
+
+ <send>
+  <![CDATA[
+
+    CANCEL sip:[field0 line=0]@[remote_ip]:[remote_port] SIP/2.0
+    Via: SIP/2.0/[transport] [local_ip]:[local_port]
+    From: <sip:[field1 line=0]@[local_ip]:[local_port]>;tag=[call_number]_sipp_call_canceler_[call_number]
+    To: <sip:[field0 line=0]@[remote_ip]:[remote_port]>
+    Call-ID: [call_id]
+    Cseq: [cseq] CANCEL
+    Max-Forwards: 70
+    User-Agent: CERNphone canceler
+    Content-Length: 0
+
+  ]]>
+ </send>
+
+ <!-- Simple goto "11" after receiving 200 -->
+ <recv response="200" next="11"/>
+
+ <label id="10"/>
+
+ <send>
+  <![CDATA[
+
+    CANCEL sip:[field0 line=0]@[remote_ip]:[remote_port] SIP/2.0
+    Via: SIP/2.0/[transport] [local_ip]:[local_port]
+    From: <sip:[field1 line=0]@[local_ip]:[local_port]>;tag=[call_number]_sipp_call_canceler_[call_number]
+    To: <sip:[field0 line=0]@[remote_ip]:[remote_port]>
+    Call-ID: [call_id]
+    Cseq: [cseq] CANCEL
+    Max-Forwards: 70
+    User-Agent: CERNphone canceler
+    Reason: SIP;cause=200;text="Call completed elsewhere"
+    Content-Length: 0
+
+  ]]>
+ </send>
+
+ <recv response="200" />
+
+ <label id="11"/>
+
+ <recv response="487" />
+
+ <send>
+  <![CDATA[
+
+    ACK sip:[field0 line=0]@[remote_ip]:[remote_port] SIP/2.0
+    Via: SIP/2.0/[transport] [local_ip]:[local_port]
+    From: <sip:[field1 line=0]@[local_ip]:[local_port]>;tag=[call_number]_sipp_call_canceler_[call_number]
+    [last_To:]
+    Call-ID: [call_id]
+    Cseq: [cseq] ACK
+    Contact: sip:asterisk@[local_ip]:[local_port]
+    Content-Length: 0
+
+  ]]>
+ </send>
+
+ <label id="12" />
+
+</scenario>
